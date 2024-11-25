@@ -21,7 +21,7 @@ package onamae
   * ```
   */
 final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]):
-  // Note that the type of `orbitSet` is `Set[Nominal[A]#Orbit]` because it is hard to decide the `Orbit` type for `A` in Scala.
+  // Note that the type of `orbitSet` is `Set[Nominal[A]#Orbit]` because it is hard to decide the right `Orbit` type for `A` in Scala.
   // Thus, we assume the given `Nominal[A]` instances must be the same across multiple method calls and cast `orbitSet` as needed.
 
   /** Returns the number of orbits contained in `this`.
