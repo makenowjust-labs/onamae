@@ -106,11 +106,13 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
       set.toSet.toSeq match
         case Seq()                       => (quot, ks)
         case a +: as if quot.contains(a) => loop(n, NSet(as*), quot, ks)
-        case a +: as =>
-          val keys = NSet.product(NSet(as*), NSet(a)).filter(f(_, _)).map(_._1)
-          val support = keys.foldLeft(A.support(a))((support, a) => support intersect A.support(a))
+        case a +: as                     =>
+          // `eqPair` is a set of pairs of `a` and equivalence values to `a`.
+          // To compute the least support correctly, we need to keep `eqPair` as a set of pairs, not a set of values.
+          val eqPair = NSet.product(NSet(as*), NSet(a)).filter(f(_, _))
+          val support = eqPair.foldLeft(A.support(a))((support, aa) => support intersect A.support(aa._1))
           val k = EC(n, support)
-          val newQuot = (keys + a).foldLeft(quot)((quot, key) => quot.updated(key, k))
+          val newQuot = (eqPair.map(_._1) + a).foldLeft(quot)((quot, a) => quot.updated(a, k))
           loop(n + 1, NSet(as*), newQuot, ks + k)
     loop(0, this, NMap.empty, NSet.empty)
 
