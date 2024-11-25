@@ -126,6 +126,7 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
 
   override def toString(): String = s"NSet { val orbitSet = $orbitSet }"
 
+/** NSet utilities. */
 object NSet:
 
   /** EquivalentClass is an equivalent class for `NSet#quotient` results. */

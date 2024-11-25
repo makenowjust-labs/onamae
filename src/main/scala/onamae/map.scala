@@ -5,6 +5,9 @@ import scala.collection.SortedSet
 
 /** NMap is an equivariant map.
   *
+  * We can use this much like a `scala.collection.Map`. However, some methods need a `Nominal[K]` and/or `Nominal[V]`
+  * instance(s) to work correctly.
+  *
   * **Example**:
   *
   * ```scala
@@ -112,6 +115,7 @@ final class NMap[K, V] private (private val orbitMap: Map[Nominal[K]#Orbit, NMap
 
   override def toString(): String = s"NMap { val orbitMap = $orbitMap }"
 
+/** NMap utilities. */
 object NMap:
   /** Entry is an internal structure of entries of equivariant maps (i.e., orbits of values).
     *

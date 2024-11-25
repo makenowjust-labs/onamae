@@ -48,6 +48,7 @@ final case class Support(toSortedSet: SortedSet[Atom]):
 
   override def toString(): String = toSortedSet.mkString("Support(", ", ", ")")
 
+/** Support utilities. */
 object Support:
 
   /** Returns the empty support. */
@@ -63,6 +64,7 @@ object Support:
 enum Key:
   case Left, Both, Right
 
+/** Key utilities. */
 object Key:
   private val productKeysMemo: mutable.Map[(Int, Int), Seq[Seq[Key]]] = mutable.Map.empty
   private val sepProductKeysMemo: mutable.Map[(Int, Int), Seq[Seq[Key]]] = mutable.Map.empty
@@ -160,6 +162,7 @@ trait Nominal[A]:
   def defaultElementOf(orbit: Orbit): A =
     elementOf(orbit, Support.default(dim(orbit)))
 
+/** Nominal utilities and default instances. */
 object Nominal:
 
   /** Computes a sequence of orbits of `orbitA` and `orbitB` products.
