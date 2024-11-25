@@ -96,20 +96,20 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
     orbitSet.foldLeft(initial)((b, orbit) => f(b, A.defaultElementOf(orbit.asInstanceOf[A.Orbit])))
 
   /** Computes the quotient of `this` by an equational relation `f`.
-    * The result is a pair of a mapping from values to quotient classes and a set of quotient classes.
+    * The result is a pair of a mapping from values to their equivalent classes and a set of equivalent classes.
     *
     * Note that `f` should be an equivariant map.
     */
-  def quotient(f: (A, A) => Boolean)(using A: Nominal[A]): (NMap[A, NSet.QuotientClass], NSet[NSet.QuotientClass]) =
-    import NSet.{QuotientClass => QC}
-    def loop(n: Int, set: NSet[A], quot: NMap[A, QC], ks: NSet[QC]): (NMap[A, QC], NSet[QC]) =
+  def quotient(f: (A, A) => Boolean)(using A: Nominal[A]): (NMap[A, NSet.EquivalentClass], NSet[NSet.EquivalentClass]) =
+    import NSet.{EquivalentClass => EC}
+    def loop(n: Int, set: NSet[A], quot: NMap[A, EC], ks: NSet[EC]): (NMap[A, EC], NSet[EC]) =
       set.toSet.toSeq match
         case Seq()                       => (quot, ks)
         case a +: as if quot.contains(a) => loop(n, NSet(as*), quot, ks)
         case a +: as =>
           val keys = NSet.product(NSet(as*), NSet(a)).filter(f(_, _)).map(_._1)
           val support = keys.foldLeft(A.support(a))((support, a) => support intersect A.support(a))
-          val k = QC(n, support)
+          val k = EC(n, support)
           val newQuot = (keys + a).foldLeft(quot)((quot, key) => quot.updated(key, k))
           loop(n + 1, NSet(as*), newQuot, ks + k)
     loop(0, this, NMap.empty, NSet.empty)
@@ -128,7 +128,8 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
 
 object NSet:
 
-  final case class QuotientClass(index: Int, support: Support) derives Nominal
+  /** EquivalentClass is an equivalent class for `NSet#quotient` results. */
+  final case class EquivalentClass(index: Int, support: Support) derives Nominal
 
   // `NSet` is nominal and its instance is trivial because it is equivariant.
   given nominalInstance[A]: Nominal[NSet[A]] = Nominal.derivedTrivially
