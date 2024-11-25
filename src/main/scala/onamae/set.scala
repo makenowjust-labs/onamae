@@ -1,5 +1,7 @@
 package onamae
 
+import scala.annotation.tailrec
+
 /** NSet is an equivariant set.
   *
   * On the implementation, this holds a set of orbits of values. Therefore, this set can seemingly contain infinite
@@ -145,6 +147,15 @@ object NSet:
 
   /** An equivariant set contains every atoms. */
   val atoms: NSet[Atom] = NSet(Atom(0))
+
+  def atomsList(n: Int): NSet[List[Atom]] =
+    @tailrec
+    def loop(i: Int, atomsList: NSet[List[Atom]]): NSet[List[Atom]] =
+      if i == n then atomsList
+      else loop(i + 1, NSet.map2(atoms, atomsList)(_ :: _))
+    loop(0, NSet(Nil))
+
+  def union[A](seq: Seq[NSet[A]]): NSet[A] = seq.reduceLeft(_ union _)
 
   /** Computes a product of two equivariant sets under the given product function `f`. */
   private def productWith[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B])(
