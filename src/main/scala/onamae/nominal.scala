@@ -135,9 +135,9 @@ final case class ProductOrbit[A, B](orbitA: Nominal[A]#Orbit, orbitB: Nominal[B]
   *
   * **Laws**:
   *
-  * 1. `dim(orbit(x)) == support(x).size`
+  * 1. `dim(orbitOf(x)) == support(x).size`
   * 2. `orbitOf(elementOf(o, s)) == o` (if `s.size == dim(o)`)
-  * 3. `elementOf(orbit(x), support(x)) == x`
+  * 3. `elementOf(orbitOf(x), support(x)) == x`
   */
 trait Nominal[A]:
 
