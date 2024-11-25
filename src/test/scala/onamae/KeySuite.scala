@@ -11,6 +11,8 @@ class KeySuite extends munit.FunSuite:
 
   test("Key.leftProduct"):
     assertEquals(Key.leftProductKeys(2, 1), Seq(Seq(Left, Both), Seq(Both, Left)))
+    assertEquals(Key.leftProductKeys(1, 2), Seq.empty)
 
   test("Key.rightProduct"):
     assertEquals(Key.rightProductKeys(1, 2), Seq(Seq(Both, Right), Seq(Right, Both)))
+    assertEquals(Key.rightProductKeys(2, 1), Seq.empty)
