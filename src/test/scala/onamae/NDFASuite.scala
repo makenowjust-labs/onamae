@@ -26,3 +26,9 @@ class NDFASuite extends munit.FunSuite:
 
     assert(!dfa.run(Seq(Get(Atom(0)))))
     assert(!dfa.run(Seq(Put(Atom(1)), Get(Atom(0)))))
+
+  test("NDFA.findSepWord"):
+    import NDFA.FIFOAlphabet.{Put, Get}
+
+    assertEquals(NDFA.findSepWord(NDFA.fifo(1), NDFA.fifo(2)), Some(Seq(Put(Atom(0)), Put(Atom(1)))))
+    assertEquals(NDFA.findSepWord(NDFA.fifo(2), NDFA.minimize(NDFA.fifo(2))), None)

@@ -23,7 +23,7 @@ final class Atom(private val id: Int) extends Ordered[Atom]:
   override def toString(): String = s"Atom($id)"
 
 /** Support is a support of nominal elements. */
-final case class Support(toSortedSet: SortedSet[Atom]):
+final case class Support(toSortedSet: SortedSet[Atom]) extends Ordered[Support]:
 
   /** Returns the size of `this` support. */
   def size: Int = toSortedSet.size
@@ -45,6 +45,10 @@ final case class Support(toSortedSet: SortedSet[Atom]):
 
   /** Returns a sequence of `this`. */
   def toSeq: Seq[Atom] = toSortedSet.toSeq
+
+  override def compare(that: Support): Int =
+    import scala.math.Ordering.Implicits.sortedSetOrdering
+    toSortedSet.compare(that.toSortedSet)
 
   override def toString(): String = toSortedSet.mkString("Support(", ", ", ")")
 

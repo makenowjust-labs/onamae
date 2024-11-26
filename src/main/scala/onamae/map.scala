@@ -56,6 +56,10 @@ final class NMap[K, V] private (private val orbitMap: Map[Nominal[K]#Orbit, NMap
   /** An infix form of `NMap#updated`. */
   infix def +(kv: (K, V))(using Nominal[K], Nominal[V]) = updated(kv._1, kv._2)
 
+  /** Returns the union of two equivariant map. When a key is conflict, the latter value is preferred. */
+  def ++(that: NMap[K, V])(using Nominal[K], Nominal[V]): NMap[K, V] =
+    unionWith(that)((_, v) => v)
+
   /** Returns a new equivariant map of `this` removed `key` and its value. */
   def removed(key: K)(using K: Nominal[K]): NMap[K, V] = new NMap(orbitMap.removed(K.orbitOf(key)))
 

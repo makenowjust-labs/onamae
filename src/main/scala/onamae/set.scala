@@ -37,7 +37,7 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
   def isEmpty: Boolean = orbitSet.isEmpty
 
   /** Like `NSet#isEmpty`, but it is the opposite. */
-  def nonEmpty: Boolean = orbitSet.isEmpty
+  def nonEmpty: Boolean = orbitSet.nonEmpty
 
   /** Checks whether `this` contains `value` or not. */
   def contains(value: A)(using A: Nominal[A]): Boolean = orbitSet.contains(A.orbitOf(value))
@@ -105,22 +105,28 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
   def quotient(f: (A, A) => Boolean)(using A: Nominal[A]): (NMap[A, NSet.EquivalentClass], NSet[NSet.EquivalentClass]) =
     import NSet.{EquivalentClass => EC}
     def loop(n: Int, set: NSet[A], quot: NMap[A, EC], ks: NSet[EC]): (NMap[A, EC], NSet[EC]) =
-      set.toSet.toSeq match
+      set.toSeq match
         case Seq()                       => (quot, ks)
         case a +: as if quot.contains(a) => loop(n, NSet(as*), quot, ks)
         case a +: as                     =>
-          // `eqPair` is a set of pairs of `a` and equivalence values to `a`.
-          // To compute the least support correctly, we need to keep `eqPair` as a set of pairs, not a set of values.
-          val eqPair = NSet.product(NSet(as*), NSet(a)).filter(f(_, _))
-          val support = eqPair.foldLeft(A.support(a))((support, aa) => support intersect A.support(aa._1))
-          val k = EC(n, support)
-          val newQuot = (eqPair.map(_._1) + a).foldLeft(quot)((quot, a) => quot.updated(a, k))
-          loop(n + 1, NSet(as*), newQuot, ks + k)
+          // `eqPairSet` is a set of pairs of `a` and equivalence values to `a`.
+          // To compute the least support correctly, we need to keep `eqPairSet` as a set of pairs, not a set of values.
+          val eqPairSet = NSet.product(set, NSet(a)).filter(f(_, _))
+          val supportPairSet = eqPairSet.map((a1, a2) => (a1, a2) -> (A.support(a1) intersect A.support(a2)))
+          val newQuot = supportPairSet.foldLeft(NMap.empty[A, EC]):
+            case (newQuot, ((a, _), support1)) =>
+              newQuot.get(a) match
+                case Some(EC(_, support2)) => newQuot.updated(a, EC(n, support1 intersect support2))
+                case None                  => newQuot.updated(a, EC(n, support1))
+          loop(n + 1, NSet(as*), quot ++ newQuot, ks union newQuot.keySet.map(newQuot(_)))
     loop(0, this, NMap.empty, NSet.empty)
 
   /** Returns the set of default values of orbits in `this`. */
   def toSet(using A: Nominal[A]): Set[A] =
     orbitSet.map(orbit => A.defaultElementOf(orbit.asInstanceOf[A.Orbit]))
+
+  /** Like `NSet#toSet`, but it returns `Seq` instead. */
+  def toSeq(using A: Nominal[A]): Seq[A] = toSet.toSeq
 
   override def equals(that: Any): Boolean = that match
     case that: NSet[_] => orbitSet == that.orbitSet
@@ -148,6 +154,7 @@ object NSet:
   /** An equivariant set contains every atoms. */
   val atoms: NSet[Atom] = NSet(Atom(0))
 
+  /** Returns a set of sequence having `n` atoms. */
   def atomsList(n: Int): NSet[List[Atom]] =
     @tailrec
     def loop(i: Int, atomsList: NSet[List[Atom]]): NSet[List[Atom]] =
@@ -155,7 +162,8 @@ object NSet:
       else loop(i + 1, NSet.map2(atoms, atomsList)(_ :: _))
     loop(0, NSet(Nil))
 
-  def union[A](seq: Seq[NSet[A]]): NSet[A] = seq.reduceLeft(_ union _)
+  /** Returns the union of all sets of `set`. */
+  def union[A](set: NSet[NSet[A]]): NSet[A] = set.foldLeft(NSet.empty)(_ union _)
 
   /** Computes a product of two equivariant sets under the given product function `f`. */
   private def productWith[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B])(

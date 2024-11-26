@@ -9,6 +9,13 @@ lazy val root = project
     scalaVersion := "3.5.2",
     console / initialCommands :=
       """|import onamae.*
+         |
+         |def time[A](f: => A): (Long, A) =
+         |  val start = System.currentTimeMillis
+         |  val a = f
+         |  val end = System.currentTimeMillis
+         |  println(f"time: ${(end - start).toDouble / 1000}%.3f s")
+         |  (end - start, a)
          |""".stripMargin,
-    libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test
+    libraryDependencies += "org.scalameta" %% "munit" % "1.0.2" % Test
   )

@@ -1,6 +1,7 @@
 package onamae
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 
 /** NDFA is a nominal DFA. */
 final case class NDFA[Q, A](
@@ -25,7 +26,7 @@ object NDFA:
     *
     * [Venhoek, et al. (2022)]: https://www.sciencedirect.com/science/article/abs/pii/S0304397522005291
     */
-  def minimize[Q, A](dfa: NDFA[Q, A])(using Q: Nominal[Q], A: Nominal[A]): NDFA[NSet.EquivalentClass, A] =
+  def minimize[Q, A](dfa: NDFA[Q, A])(using Nominal[Q], Nominal[A]): NDFA[NSet.EquivalentClass, A] =
     import dfa.{stateSet, alphabet, initialState, acceptStateSet, transitionFunction}
 
     var (quot, ks) =
@@ -51,6 +52,35 @@ object NDFA:
       acceptStateSet.map(quot(_)),
       NMap(transitions.toSeq*)
     )
+
+  /** Finds a separating word between `dfa1` and `dfa2`.
+    *
+    * A separating word is a word that is accepted by one DFA, but is not accepted by another.
+    */
+  def findSepWord[Q1, Q2, A](dfa1: NDFA[Q1, A], dfa2: NDFA[Q2, A])(using
+      Nominal[Q1],
+      Nominal[Q2],
+      Nominal[A]
+  ): Option[Seq[A]] =
+    require(dfa1.alphabet == dfa2.alphabet)
+    val alphabet = dfa1.alphabet
+
+    val queue = mutable.Queue.empty[(Q1, Q2, Seq[A])]
+    val visited = mutable.Set.empty[(Q1, Q2)]
+
+    queue.enqueue((dfa1.initialState, dfa2.initialState, Seq.empty))
+    visited.add((dfa1.initialState, dfa2.initialState))
+
+    while queue.nonEmpty do
+      val (q1, q2, word) = queue.dequeue
+      if dfa1.acceptStateSet.contains(q1) != dfa2.acceptStateSet.contains(q2) then return Some(word)
+      val nextStatePairs = NSet.map2(NSet((q1, q2)), alphabet):
+        case ((q1, q2), a) => (a, (dfa1.transitionFunction((q1, a)), dfa2.transitionFunction((q2, a))))
+      for (a, (p1, p2)) <- nextStatePairs.toSet; if !visited.contains((p1, p2)) do
+        queue.enqueue((p1, p2, word :+ a))
+        visited.add((p1, p2))
+
+    None
 
   // FIFO (First-In First-Out) queue example:
 
@@ -93,8 +123,8 @@ object NDFA:
     val alphabet = NSet.atoms.map(Put(_)) union NSet.atoms.map(Get(_))
 
     def possibleFIFOQueue(i: Int): NSet[FIFOQueue[Atom]] =
-      NSet.union((0 to i).map(j => NSet.map2(NSet.atomsList(j), NSet.atomsList(i - j))(FIFOQueue(_, _))))
-    val allPossibleFIFOQueue = NSet.union((0 to n).map(possibleFIFOQueue))
+      NSet.union(NSet((0 to i).map(j => NSet.map2(NSet.atomsList(j), NSet.atomsList(i - j))(FIFOQueue(_, _)))*))
+    val allPossibleFIFOQueue = NSet.union(NSet((0 to n).map(possibleFIFOQueue)*))
 
     val stateSet = NSet(Option.empty) union allPossibleFIFOQueue.map(Option(_))
 

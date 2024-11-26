@@ -1,7 +1,7 @@
 package onamae
 
 class NMapSuite extends munit.FunSuite:
-  test("NMap (example)"):
+  test("NMap: example"):
     val set = NSet.sepProduct(NSet.atoms, NSet.atoms)
     val map = NMap.fromSet(set): (l, r) =>
       if l < r then Left(l) else Right(r)
