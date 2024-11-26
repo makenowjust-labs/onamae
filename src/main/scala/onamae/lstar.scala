@@ -89,8 +89,7 @@ object LStar:
       val candidatePairSet = NSet
         .product(candidateSet, prefixSet)
         .filter(equivalentRow(_, _))
-        .map: (c, p) =>
-          c -> quot(p)
+        .map((c, p) => c -> quot(p))
       val candidateQuot = NMap(candidatePairSet.toSeq*)
       val transitions = NSet.map2(prefixSet, summon[Alphabet[A]].set): (prefix, a) =>
         val nextWord = prefix :+ a

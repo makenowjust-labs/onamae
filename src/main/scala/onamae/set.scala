@@ -112,7 +112,7 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
           // `eqSet` is a set of equivalent values to `a`.
           val eqSet = NSet(a) union NSet(as*).filter(b => NSet.product(NSet(a), NSet(b)).exists(f(_, _)))
           // To compute the least support correctly, we need to `eqPairSet`.
-          // Note that `.filter(f(_, _))` is necessary here because a pair of `NSet.product(eqSet, eqSet)` may be not equivalent.
+          // Note that `.filter(f(_, _))` is necessary here because a pair in `NSet.product(eqSet, eqSet)` may not be equivalent.
           val eqPairSet = NSet.product(eqSet, eqSet).filter(f(_, _))
           val supportPairSet = eqPairSet.map((a, b) => a -> (A.support(a) intersect A.support(b)))
           val newQuot = supportPairSet.foldLeft(NMap.empty[A, EC]):
