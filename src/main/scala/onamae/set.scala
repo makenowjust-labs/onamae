@@ -104,22 +104,24 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
     */
   def quotient(f: (A, A) => Boolean)(using A: Nominal[A]): (NMap[A, NSet.EquivalentClass], NSet[NSet.EquivalentClass]) =
     import NSet.{EquivalentClass => EC}
-    def loop(n: Int, set: NSet[A], quot: NMap[A, EC], ks: NSet[EC]): (NMap[A, EC], NSet[EC]) =
-      set.toSeq match
+    def loop(n: Int, as: Seq[A], quot: NMap[A, EC], ks: NSet[EC]): (NMap[A, EC], NSet[EC]) =
+      as match
         case Seq()                       => (quot, ks)
-        case a +: as if quot.contains(a) => loop(n, NSet(as*), quot, ks)
+        case a +: as if quot.contains(a) => loop(n, as, quot, ks)
         case a +: as                     =>
-          // `eqPairSet` is a set of pairs of `a` and equivalence values to `a`.
-          // To compute the least support correctly, we need to keep `eqPairSet` as a set of pairs, not a set of values.
-          val eqPairSet = NSet.product(set, NSet(a)).filter(f(_, _))
-          val supportPairSet = eqPairSet.map((a1, a2) => (a1, a2) -> (A.support(a1) intersect A.support(a2)))
+          // `eqSet` is a set of equivalent values to `a`.
+          val eqSet = NSet(a) union NSet(as*).filter(b => NSet.product(NSet(a), NSet(b)).exists(f(_, _)))
+          // To compute the least support correctly, we need to `eqPairSet`.
+          // Note that `.filter(f(_, _))` is necessary here because a pair of `NSet.product(eqSet, eqSet)` may be not equivalent.
+          val eqPairSet = NSet.product(eqSet, eqSet).filter(f(_, _))
+          val supportPairSet = eqPairSet.map((a, b) => a -> (A.support(a) intersect A.support(b)))
           val newQuot = supportPairSet.foldLeft(NMap.empty[A, EC]):
-            case (newQuot, ((a, _), support1)) =>
+            case (newQuot, (a, support1)) =>
               newQuot.get(a) match
                 case Some(EC(_, support2)) => newQuot.updated(a, EC(n, support1 intersect support2))
                 case None                  => newQuot.updated(a, EC(n, support1))
-          loop(n + 1, NSet(as*), quot ++ newQuot, ks union newQuot.keySet.map(newQuot(_)))
-    loop(0, this, NMap.empty, NSet.empty)
+          loop(n + 1, as, quot ++ newQuot, ks union newQuot.keySet.map(newQuot(_)))
+    loop(0, this.toSeq, NMap.empty, NSet.empty)
 
   /** Returns the set of default values of orbits in `this`. */
   def toSet(using A: Nominal[A]): Set[A] =
