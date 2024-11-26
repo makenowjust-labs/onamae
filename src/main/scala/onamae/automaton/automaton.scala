@@ -1,4 +1,5 @@
 package onamae
+package automaton
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -84,7 +85,7 @@ object NDFA:
 
   // FIFO (First-In First-Out) queue example:
 
-  /** FIFOQueue is a function FIFO (First-In First-Out) queue implementation. */
+  /** FIFOQueue is a functional FIFO (First-In First-Out) queue implementation. */
   final case class FIFOQueue[A](as1: List[A], as2: List[A]) derives Nominal:
 
     /** Returns the size of `this`. */

@@ -1,4 +1,5 @@
 package onamae
+package automaton
 
 class NDFASuite extends munit.FunSuite:
   test("NDFA.fifo"):

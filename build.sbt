@@ -8,7 +8,8 @@ lazy val root = project
     name := "onamae",
     scalaVersion := "3.5.2",
     console / initialCommands :=
-      """|import onamae.*
+      """|import onamae.{*, given}
+         |import onamae.automaton.{*, given}
          |
          |def time[A](f: => A): (Long, A) =
          |  val start = System.currentTimeMillis

@@ -97,7 +97,7 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
   def foldLeft[B](initial: B)(f: (B, A) => B)(using A: Nominal[A]): B =
     orbitSet.foldLeft(initial)((b, orbit) => f(b, A.defaultElementOf(orbit.asInstanceOf[A.Orbit])))
 
-  /** Computes the quotient of `this` by an equational relation `f`.
+  /** Computes the quotient of `this` by an equivalence relation `f`.
     * The result is a pair of a mapping from values to their equivalent classes and a set of equivalent classes.
     *
     * Note that `f` should be an equivariant map.
@@ -110,10 +110,10 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
         case a +: as if quot.contains(a) => loop(n, as, quot, ks)
         case a +: as                     =>
           // `eqSet` is a set of equivalent values to `a`.
-          val eqSet = NSet(a) union NSet(as*).filter(b => NSet.product(NSet(a), NSet(b)).exists(f(_, _)))
+          val eqSet = NSet(a) union NSet(as*).filter(b => NSet.productIterator(NSet(a), NSet(b)).exists(f(_, _)))
           // To compute the least support correctly, we need to `eqPairSet`.
-          // Note that `.filter(f(_, _))` is necessary here because a pair in `NSet.product(eqSet, eqSet)` may not be equivalent.
-          val eqPairSet = NSet.product(eqSet, eqSet).filter(f(_, _))
+          // Note that `filter(f(_, _))` is necessary here because a pair of two `eqSet`s may not be equivalent.
+          val eqPairSet = NSet.productIterator(eqSet, eqSet).filter(f(_, _))
           val supportPairSet = eqPairSet.map((a, b) => a -> (A.support(a) intersect A.support(b)))
           val newQuot = supportPairSet.foldLeft(NMap.empty[A, EC]):
             case (newQuot, (a, support1)) =>
@@ -123,12 +123,16 @@ final class NSet[A] private[onamae] (private val orbitSet: Set[Nominal[A]#Orbit]
           loop(n + 1, as, quot ++ newQuot, ks union newQuot.keySet.map(newQuot(_)))
     loop(0, this.toSeq, NMap.empty, NSet.empty)
 
+  /** Returns an iterator to iterate default values of orbits in `this`. */
+  def iterator(using A: Nominal[A]): Iterator[A] =
+    orbitSet.iterator.map(orbit => A.defaultElementOf(orbit.asInstanceOf[A.Orbit]))
+
   /** Returns the set of default values of orbits in `this`. */
   def toSet(using A: Nominal[A]): Set[A] =
-    orbitSet.map(orbit => A.defaultElementOf(orbit.asInstanceOf[A.Orbit]))
+    iterator.toSet
 
   /** Like `NSet#toSet`, but it returns `Seq` instead. */
-  def toSeq(using A: Nominal[A]): Seq[A] = toSet.toSeq
+  def toSeq(using A: Nominal[A]): Seq[A] = iterator.toSeq
 
   override def equals(that: Any): Boolean = that match
     case that: NSet[_] => orbitSet == that.orbitSet
@@ -150,8 +154,11 @@ object NSet:
   /** Returns the empty equivariant set. */
   def empty[A]: NSet[A] = new NSet(Set.empty)
 
-  /** Returns a equivariant set with the given `values`. */
-  def apply[A](values: A*)(using A: Nominal[A]): NSet[A] = new NSet(values.map(A.orbitOf).toSet)
+  /** Constructs an equivariant set with the given `values`. */
+  def apply[A](values: A*)(using A: Nominal[A]): NSet[A] = NSet.from(values)
+
+  /** Constructs an equivariant set with values of `iter`. */
+  def from[A](iter: IterableOnce[A])(using A: Nominal[A]): NSet[A] = new NSet(iter.iterator.map(A.orbitOf).toSet)
 
   /** An equivariant set contains every atoms. */
   val atoms: NSet[Atom] = NSet(Atom(0))
@@ -167,37 +174,106 @@ object NSet:
   /** Returns the union of all sets of `set`. */
   def union[A](set: NSet[NSet[A]]): NSet[A] = set.foldLeft(NSet.empty)(_ union _)
 
-  /** Computes a product of two equivariant sets under the given product function `f`. */
-  private def productWith[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B])(
-      f: (A.Orbit, B.Orbit) => Seq[ProductOrbit[A, B]]
-  ): NSet[(A, B)] =
-    new NSet(
-      for
-        orbitA <- setA.orbitSet.asInstanceOf[Set[A.Orbit]]
-        orbitB <- setB.orbitSet.asInstanceOf[Set[B.Orbit]]
-        orbitAxB <- f(orbitA, orbitB)
-      yield orbitAxB.asInstanceOf[Nominal[(A, B)]#Orbit]
-    )
+  /** Iterates each product of two equivariant sets over the given key generator `g`. */
+  private def productWith[A: Nominal, B: Nominal](setA: NSet[A], setB: NSet[B])(g: KeyGen): Iterator[(A, B)] =
+    val A = summon[Nominal[A]]
+    val B = summon[Nominal[B]]
+    val AxB = summon[Nominal[(A, B)]]
+    for
+      orbitA <- setA.orbitSet.asInstanceOf[Set[A.Orbit]].iterator
+      orbitB <- setB.orbitSet.asInstanceOf[Set[B.Orbit]].iterator
+      keys <- g(A.dim(orbitA), B.dim(orbitB)).iterator
+    yield
+      val orbitAxB = ProductOrbit(orbitA, orbitB, keys)
+      AxB.defaultElementOf(orbitAxB.asInstanceOf[AxB.Orbit])
 
-  /** Returns a set of the product of two equivariant sets. */
-  def product[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B]): NSet[(A, B)] =
-    productWith(setA, setB)(Nominal.product[A, B](_, _))
+  /** Like `NSet.product`, but it returns an iterator. */
+  def productIterator[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B]): Iterator[(A, B)] =
+    productWith(setA, setB)(KeyGen.product(_, _))
 
-  /** Like `NSet.product`, but the result equivariant set does not contain a pair whose supports have an intersection. */
+  /** Like `NSet.sepProduct`, but it returns an iterator. */
+  def sepProductIterator[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B]): Iterator[(A, B)] =
+    productWith(setA, setB)(KeyGen.sepProduct(_, _))
+
+  /** Like `NSet.leftProduct`, but it returns an iterator. */
+  def leftProductIterator[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B]): Iterator[(A, B)] =
+    productWith(setA, setB)(KeyGen.leftProduct(_, _))
+
+  /** Like `NSet.rightProduct`, but it returns an iterator. */
+  def rightProductIterator[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B]): Iterator[(A, B)] =
+    productWith(setA, setB)(KeyGen.rightProduct(_, _))
+
+  /** Returns the Cartesian product of two equivariant sets.
+    *
+    * It constructs a new equivariant set of the Cartesian product, however, sometimes we don't need a whole set and
+    * just need to iterate each product instead. In such cases, we can use `NSet#productIterator` that returns `Iterator[(A, B)]`.
+    * This is critical when performance is important.
+    *
+    * **Example**:
+    *
+    * ```scala
+    * val set = NSet.product(NSet.atoms, NSet.atoms)
+    * set.toSet // => Set((Atom(0), Atom(0)), (Atom(0), Atom(1)), (Atom(1), Atom(0)))
+    * ```
+    */
+  def product[A, B](setA: NSet[A], setB: NSet[B])(using Nominal[A], Nominal[B]): NSet[(A, B)] =
+    NSet.from(productIterator(setA, setB))
+
+  /** Like `NSet.product`, but the result equivariant set does not contain a pair whose supports have an intersection.
+    *
+    * **Example**:
+    *
+    * ```scala
+    * val set = NSet.sepProduct(NSet.atoms, NSet.atoms)
+    * set.toSet // => Set((Atom(0), Atom(1)), (Atom(1), Atom(0)))
+    * ```
+    */
   def sepProduct[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B]): NSet[(A, B)] =
-    productWith(setA, setB)(Nominal.sepProduct[A, B](_, _))
+    NSet.from(sepProductIterator(setA, setB))
 
-  /** Like `NSet.product`, but the result is left-product. */
+  /** Like `NSet.product`, but the result is left-product.
+    * That is, the right value are supported by the support of the left value.
+    *
+    * **Example**
+    *
+    * ```scala
+    * val set = NSet.leftProduct(NSet.product(NSet.atoms, NSet.atoms), NSet.atoms)
+    * set.toSet
+    * // => Set(
+    * //      ((Atom(0), Atom(0)), Atom(0)),
+    * //      ((Atom(0), Atom(1)), Atom(0)),
+    * //      ((Atom(0), Atom(1)), Atom(1)),
+    * //      ((Atom(1), Atom(0)), Atom(0)),
+    * //      ((Atom(1), Atom(0)), Atom(1))
+    * //    )
+    * ```
+    */
   def leftProduct[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B]): NSet[(A, B)] =
-    productWith(setA, setB)(Nominal.leftProduct[A, B](_, _))
+    NSet.from(leftProductIterator(setA, setB))
 
-  /** Like `NSet.product`, but the result is right-product. */
+  /** Like `NSet.product`, but the result is right-product.
+    * That is, the left value are supported by the suppor of the right value.
+    *
+    * **Example**:
+    *
+    * ```scala
+    * val set = NSet.rightProduct(NSet.atoms, NSet.product(NSet.atoms, NSet.atoms))
+    * set.toSet
+    * // => Set(
+    * //      (Atom(0), (Atom(0), Atom(0))),
+    * //      (Atom(0), (Atom(0), Atom(1))),
+    * //      (Atom(1), (Atom(0), Atom(1))),
+    * //      (Atom(0), (Atom(1), Atom(0))),
+    * //      (Atom(1), (Atom(1), Atom(0)))
+    * //    )
+    * ```
+    */
   def rightProduct[A, B](setA: NSet[A], setB: NSet[B])(using A: Nominal[A], B: Nominal[B]): NSet[(A, B)] =
-    productWith(setA, setB)(Nominal.rightProduct[A, B](_, _))
+    NSet.from(rightProductIterator(setA, setB))
 
   /** Returns a new equivariant set with values of two sets converted by `f`.
     *
     * Note that `f` should be an equivariant map.
     */
   def map2[A, B, C](setA: NSet[A], setB: NSet[B])(f: (A, B) => C)(using Nominal[A], Nominal[B], Nominal[C]): NSet[C] =
-    product(setA, setB).map(f(_, _))
+    NSet.from(productIterator(setA, setB).map(f(_, _)))

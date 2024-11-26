@@ -1,4 +1,5 @@
 package onamae
+package automaton
 
 object LStar:
   trait Alphabet[A]:
@@ -27,29 +28,31 @@ object LStar:
   ):
     def equivalentRow(prefix1: List[A], prefix2: List[A])(using Nominal[A]): Boolean =
       prefix1 == prefix2 || NSet
-        .product(NSet((prefix1, prefix2)), separatorSet)
+        .productIterator(NSet((prefix1, prefix2)), separatorSet)
         .forall:
           case ((prefix1, prefix2), separator) => table(prefix1 ++ separator) == table(prefix2 ++ separator)
 
-    def checkClosedness(using Nominal[A]): NSet[List[A]] =
-      candidateSet.filter(candidate => !NSet.product(NSet(candidate), prefixSet).exists(equivalentRow(_, _)))
+    def checkClosedness(using Nominal[A]): Iterator[List[A]] =
+      candidateSet.iterator.filter(candidate =>
+        !NSet.productIterator(NSet(candidate), prefixSet).exists(equivalentRow(_, _))
+      )
 
-    def checkConsistency(using Nominal[A], Alphabet[A]): NSet[List[A]] =
+    def checkConsistency(using Nominal[A], Alphabet[A]): Iterator[List[A]] =
       val ListA = summon[Nominal[List[A]]]
       val eqPairSet = NSet
         .product(prefixSet, prefixSet)
         .filter: (p1, p2) =>
           p1 != p2 && ListA.support(p1) <= ListA.support(p2) && equivalentRow(p1, p2)
       val newSeparatorSet = NSet
-        .product(eqPairSet, summon[Alphabet[A]].set)
-        .map:
+        .productIterator(eqPairSet, summon[Alphabet[A]].set)
+        .flatMap:
           case ((p1, p2), a) =>
             NSet
-              .product(NSet((p1, p2)), NSet.product(NSet(a), separatorSet).map(_ :: _))
+              .productIterator(NSet((p1, p2)), NSet.product(NSet(a), separatorSet).map(_ :: _))
               .filter:
                 case ((p1, p2), separator) => table(p1 ++ separator) != table(p2 ++ separator)
               .map(_._2)
-      NSet.union(newSeparatorSet)
+      newSeparatorSet
 
     def updateTable(wordSet: NSet[(List[A], List[A])])(using A: Nominal[A], m: Membership[A]): ObservationTable[A] =
       val newEntries = wordSet.toSeq.iterator.map: (prefix, separator) =>

@@ -1,4 +1,5 @@
 package onamae
+package automaton
 
 class LStarSuite extends munit.FunSuite:
   test("LStar.learn: fifo(1)"):
