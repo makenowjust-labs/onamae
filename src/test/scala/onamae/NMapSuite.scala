@@ -2,8 +2,8 @@ package onamae
 
 class NMapSuite extends munit.FunSuite:
   test("NMap: example"):
-    val set = NSet.sepProduct(NSet.atoms, NSet.atoms)
-    val map = NMap.fromSet(set): (l, r) =>
+    val iter = NSet.sepProductIterator(NSet.atoms, NSet.atoms)
+    val map = NMap.tabulate(iter): (l, r) =>
       if l < r then Left(l) else Right(r)
 
     assertEquals(map.get((Atom(0), Atom(1))), Some(Left(Atom(0))))

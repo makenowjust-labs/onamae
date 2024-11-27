@@ -11,8 +11,8 @@ import scala.collection.SortedSet
   * **Example**:
   *
   * ```scala
-  * val set = NSet.sepProduct(NSet.atoms, NSet.atoms)
-  * val map = NMap.fromSet(set): (l, r) =>
+  * val set = NSet.sepProductIterator(NSet.atoms, NSet.atoms)
+  * val map = NMap.tabulate(set): (l, r) =>
   *   if l < r then Left(l) else Right(r)
   *
   * map.get((Atom(0), Atom(1)))   // => Some(Left(Atom(0)))
@@ -93,6 +93,16 @@ final class NMap[K, V] private (private val orbitMap: Map[Nominal[K]#Orbit, NMap
       orbitK -> NMap.Entry.encode(key, f(value1, value2))
     new NMap(newOrbitMap.toMap)
 
+  /** Returns a new equivariant map with key-value pairs of `this` converted by `f`. */
+  def map[K1, V1](
+      f: (K, V) => (K1, V1)
+  )(using K: Nominal[K], V: Nominal[V], K1: Nominal[K1], V1: Nominal[V1]): NMap[K1, V1] =
+    val newOrbitMap = orbitMap.iterator.map: (orbitK, e) =>
+      val key = K.defaultElementOf(orbitK.asInstanceOf[K.Orbit])
+      val value = e.decode(K.support(key))
+      f(key, value)
+    NMap.from(newOrbitMap)
+
   /** Returns a new equivariant map with values of `this` converted by `f`. */
   def mapValues[V1](f: V => V1)(using K: Nominal[K], V: Nominal[V], V1: Nominal[V1]): NMap[K, V1] =
     transform((_, value) => f(value))
@@ -104,6 +114,13 @@ final class NMap[K, V] private (private val orbitMap: Map[Nominal[K]#Orbit, NMap
       val value = e.decode(K.support(key))
       orbitK -> NMap.Entry.encode(key, f(key, value))
     new NMap(newOrbitMap)
+
+  /** Returns an iterator to key-value pairs of `this`. */
+  def iterator(using K: Nominal[K], V: Nominal[V]): Iterator[(K, V)] =
+    orbitMap.iterator.map: (orbitK, e) =>
+      val key = K.defaultElementOf(orbitK.asInstanceOf[K.Orbit])
+      val value = e.decode(K.support(key))
+      key -> value
 
   /** Returns the map of default values of orbits in `this`. */
   def toMap(using K: Nominal[K], V: Nominal[V]): Map[K, V] =
@@ -161,11 +178,19 @@ object NMap:
   /** Returns the empty equivariant map. */
   def empty[K, V]: NMap[K, V] = new NMap(Map.empty)
 
-  /** Returns an equivariant map with the given key-value pairs. */
-  def apply[K, V](kvs: (K, V)*)(using K: Nominal[K], V: Nominal[V]): NMap[K, V] =
-    kvs.foldLeft(empty)(_ + _)
+  /** Constructs an equivariant map with key-value pairs of `iter`. */
+  def from[K, V](iter: IterableOnce[(K, V)])(using K: Nominal[K], V: Nominal[V]): NMap[K, V] =
+    val orbitMap = Map.newBuilder[Nominal[K]#Orbit, Entry[V]]
+    orbitMap.sizeHint(iter)
+    for (key, value) <- iter.iterator do
+      val orbitK = K.orbitOf(key)
+      val e = Entry.encode(key, value)
+      orbitMap.addOne(orbitK -> e)
+    new NMap(orbitMap.result())
 
-  /** Constructs an equivariant map from a equivariant `set` and a value mapping function `f`. */
-  def fromSet[K, V](set: NSet[K])(f: K => V)(using K: Nominal[K], V: Nominal[V]): NMap[K, V] =
-    val kvs = set.toSet.iterator.map(key => key -> f(key))
-    apply(kvs.toSeq*)
+  /** Constructs an equivariant map with the given key-value pairs. */
+  def apply[K, V](kvs: (K, V)*)(using K: Nominal[K], V: Nominal[V]): NMap[K, V] = from(kvs)
+
+  /** Constructs an equivariant map from a key iterator `iter` and a key-to-value mapping function `f`. */
+  def tabulate[K, V](iter: IterableOnce[K])(f: K => V)(using K: Nominal[K], V: Nominal[V]): NMap[K, V] =
+    from(iter.iterator.map(key => key -> f(key)))

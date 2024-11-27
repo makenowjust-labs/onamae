@@ -35,26 +35,23 @@ object NDFA:
     var done = false
     while !done do
       val (nextQuot, nextKs) = stateSet.quotient: (q1, q2) =>
-        def transitionEq(q12: (Q, Q), a: A): Boolean =
-          val (q1, q2) = q12
-          quot(transitionFunction((q1, a))) == quot(transitionFunction((q2, a)))
-        quot(q1) == quot(q2) && NSet.product(NSet((q1, q2)), alphabet).forall(transitionEq)
+        quot(q1) == quot(q2) && NSet
+          .productIterator(NSet((q1, q2)), alphabet)
+          .forall:
+            case ((q1, q2), a) => quot(transitionFunction((q1, a))) == quot(transitionFunction((q2, a)))
       done = quot == nextQuot
       quot = nextQuot
       ks = nextKs
-
-    val transitions = transitionFunction.toMap.iterator.map:
-      case ((q1, a), q2) => (quot(q1), a) -> quot(q2)
 
     NDFA(
       ks,
       alphabet,
       quot(initialState),
       acceptStateSet.map(quot(_)),
-      NMap(transitions.toSeq*)
+      transitionFunction.map { case ((q1, a), q2) => (quot(q1), a) -> quot(q2) }
     )
 
-  /** Finds a separating word between `dfa1` and `dfa2`.
+  /** Finds a separating word between `dfa1` and `dfa2` using the BFS (Breadth-First Search).
     *
     * A separating word is a word that is accepted by one DFA, but is not accepted by another.
     */
@@ -66,22 +63,59 @@ object NDFA:
     require(dfa1.alphabet == dfa2.alphabet)
     val alphabet = dfa1.alphabet
 
-    val queue = mutable.Queue.empty[(Q1, Q2, Seq[A])]
-    val visited = mutable.Set.empty[(Q1, Q2)]
+    val queue = mutable.Queue.empty[(Q1, Q2, List[A])]
+    var visited = NSet.empty[(Q1, Q2)]
 
-    queue.enqueue((dfa1.initialState, dfa2.initialState, Seq.empty))
-    visited.add((dfa1.initialState, dfa2.initialState))
+    queue.enqueue((dfa1.initialState, dfa2.initialState, Nil))
+    visited += (dfa1.initialState, dfa2.initialState)
 
     while queue.nonEmpty do
       val (q1, q2, word) = queue.dequeue
-      if dfa1.acceptStateSet.contains(q1) != dfa2.acceptStateSet.contains(q2) then return Some(word)
-      val nextStatePairs = NSet.map2(NSet((q1, q2)), alphabet):
-        case ((q1, q2), a) => (a, (dfa1.transitionFunction((q1, a)), dfa2.transitionFunction((q2, a))))
-      for (a, (p1, p2)) <- nextStatePairs.toSet; if !visited.contains((p1, p2)) do
-        queue.enqueue((p1, p2, word :+ a))
-        visited.add((p1, p2))
+      if dfa1.acceptStateSet.contains(q1) != dfa2.acceptStateSet.contains(q2) then return Some(word.reverse)
+      val nextStatePairSet = NSet.map2(NSet((q1, q2, word)), alphabet):
+        case ((q1, q2, word), a) => (dfa1.transitionFunction((q1, a)), dfa2.transitionFunction((q2, a)), a :: word)
+      for (p1, p2, nextWord) <- nextStatePairSet.iterator; if !visited.contains((p1, p2)) do
+        queue.enqueue((p1, p2, nextWord))
+        visited += (p1, p2)
 
     None
+
+  // ww (double word) example:
+
+  /** WWState is a state for nominal DFAs accepting ww (double word) language. */
+  enum WWState[+A] derives Nominal:
+    case Accept, Reject
+    case Store(as: List[A])
+    case Check(as: List[A])
+
+  /** Constructs the ww (double word) example.
+    *
+    * The parameter `n` specifies the size of the repeated word.
+    */
+  def ww(n: Int): NDFA[WWState[Atom], Atom] =
+    import WWState.{Store, Check, Accept, Reject}
+    type Q = WWState[Atom]
+    type A = Atom
+
+    def words(n: Int, m: Int): NSet[List[A]] =
+      NSet.from((n to m).iterator.flatMap(NSet.atomsList(_).iterator))
+    val stateSet = NSet[Q](Accept, Reject) union words(0, n - 1).map(Store(_)) union words(1, n).map(Check(_))
+
+    val initialState: Q = Store(Nil)
+    val acceptStateSet: NSet[Q] = NSet(Accept)
+
+    def transition(q: Q, a: A): Q = (q, a) match
+      case (Accept | Reject, _)               => Reject
+      case (Store(as), a) if as.size + 1 == n => Check((a :: as).reverse)
+      case (Store(as), a)                     => Store(a :: as)
+      case (Check(a +: as), b) if a == b =>
+        if as.isEmpty then Accept else Check(as)
+      case (Check(_), _) => Reject
+
+    val transitionKeysIter = NSet.productIterator(stateSet, NSet.atoms)
+    val transitionFunction = NMap.tabulate(transitionKeysIter)(transition(_, _))
+
+    NDFA(stateSet, NSet.atoms, initialState, acceptStateSet, transitionFunction)
 
   // FIFO (First-In First-Out) queue example:
 
@@ -112,20 +146,23 @@ object NDFA:
     case Put(atom: Atom)
     case Get(atom: Atom)
 
-  /** Constructes the FIFO queue example DFA.
+  /** Constructs the FIFO queue example DFA.
     *
     * The parameter `n` is a bound of the size of queue.
     */
   def fifo(n: Int): NDFA[Option[FIFOQueue[Atom]], FIFOAlphabet] =
+    require(n >= 0)
+
     import FIFOAlphabet.{Put, Get}
     type Q = Option[FIFOQueue[Atom]]
     type A = FIFOAlphabet
 
     val alphabet = NSet.atoms.map(Put(_)) union NSet.atoms.map(Get(_))
 
-    def possibleFIFOQueue(i: Int): NSet[FIFOQueue[Atom]] =
-      NSet.union(NSet((0 to i).map(j => NSet.map2(NSet.atomsList(j), NSet.atomsList(i - j))(FIFOQueue(_, _)))*))
-    val allPossibleFIFOQueue = NSet.union(NSet((0 to n).map(possibleFIFOQueue)*))
+    def possibleFIFOQueue(i: Int): Iterator[FIFOQueue[Atom]] =
+      (0 to i).iterator.flatMap: j =>
+        NSet.productIterator(NSet.atomsList(j), NSet.atomsList(i - j)).map(FIFOQueue(_, _))
+    val allPossibleFIFOQueue = NSet.from((0 to n).iterator.flatMap(possibleFIFOQueue))
 
     val stateSet = NSet(Option.empty) union allPossibleFIFOQueue.map(Option(_))
 
@@ -142,6 +179,7 @@ object NDFA:
           case Some((atom2, _)) if atom1 != atom2 => None
           case Some((_, queue))                   => Some(queue)
 
-    val transitionFunction = NMap.fromSet(NSet.product(stateSet, alphabet))(transition(_, _))
+    val transitionKeysIter = NSet.productIterator(stateSet, alphabet)
+    val transitionFunction = NMap.tabulate(transitionKeysIter)(transition(_, _))
 
     NDFA(stateSet, alphabet, initialState, acceptStateSet, transitionFunction)
