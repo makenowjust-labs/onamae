@@ -17,7 +17,7 @@ Furthermore, this is a port of Haskell's [ons-hs](https://github.com/Jaxan/ons-h
 
 Nominal sets are a way to work with infinite sets in programming.
 In particular, nominal sets abstract values ​​as **names** and classify infinite sets by focusing on the relationships between them.
-A name is called an **atom** in nominal sets, and the (infinite) set of all atoms is denoted as $\mathbb{A} = \{ x_1, x_2, \dots \}$.
+A name is called an **atom** in nominal sets, and the (infinite) set of all atoms is denoted as $\mathbb{A} = \\{ x_1, x_2, \dots \\}$.
 
 > [!NOTE]
 > This explanation (intentionally) lacks mathematical formality.
@@ -27,25 +27,25 @@ A name is called an **atom** in nominal sets, and the (infinite) set of all atom
 For example, we consider a set of pairs of atoms $\mathbb{A} \times \mathbb{A}$ and show how to classify it into finite values.
 This set is infinite, but when we take a pair $(x_1, x_2)$, the relationship between the two atoms (names) can be classified into the following three types: 1) $x_1 = x_2$, 2) $x_1 < x_2$, and 3) $x_1 > x_2$.
 Atoms are ordered, so they can be compared to each other.
-Therefore, $\mathbb{A} \times \mathbb{A}$ is classified into three categories: 1) $\{ (x_1, x_2) \mid x_1 = x_2 \}$, 2) $\{ (x_1, x_2) \mid x_1 < x_2 \}$, and 3) $\{ (x_1, x_2) \mid x_1 > x_2 \}$.
+Therefore, $\mathbb{A} \times \mathbb{A}$ is classified into three categories: 1) $\\{ (x_1, x_2) \mid x_1 = x_2 \\}$, 2) $\\{ (x_1, x_2) \mid x_1 < x_2 \\}$, and 3) $\\{ (x_1, x_2) \mid x_1 > x_2 \\}$.
 In addition, when we consider triplet $\mathbb{A} \times \mathbb{A} \times \mathbb{A}$ instead, it is classified into 13 categories.
 
 <details>
   <summary>13 categories of triplet of atoms</summary>
 
-   1. $\{ (x_1, x_2, x_3) \mid x_1 = x_2 = x_3 \}$ <!-- (0, 0, 0)-->
-   2. $\{ (x_1, x_2, x_3) \mid x_1 = x_2 < x_3 \}$ <!-- (0, 0, 1) -->
-   3. $\{ (x_1, x_2, x_3) \mid x_1 = x_3 < x_2 \}$ <!-- (0, 1, 0) -->
-   4. $\{ (x_1, x_2, x_3) \mid x_1 < x_2 = x_3 \}$ <!-- (0, 1, 1) -->
-   5. $\{ (x_1, x_2, x_3) \mid x_2 = x_3 < x_1 \}$ <!-- (1, 0, 0) -->
-   6. $\{ (x_1, x_2, x_3) \mid x_2 < x_1 = x_3 \}$ <!-- (1, 0, 1) -->
-   7. $\{ (x_1, x_2, x_3) \mid x_3 < x_1 = x_2 \}$ <!-- (1, 1, 0) -->
-   8. $\{ (x_1, x_2, x_3) \mid x_1 < x_2 < x_3 \}$ <!-- (0, 1, 2) -->
-   9. $\{ (x_1, x_2, x_3) \mid x_1 < x_3 < x_2 \}$ <!-- (0, 2, 1) -->
-  10. $\{ (x_1, x_2, x_3) \mid x_2 < x_1 < x_3 \}$ <!-- (1, 0, 2) -->
-  11. $\{ (x_1, x_2, x_3) \mid x_3 < x_1 < x_2 \}$ <!-- (1, 2, 0) -->
-  12. $\{ (x_1, x_2, x_3) \mid x_2 < x_3 < x_1 \}$ <!-- (2, 0, 1) -->
-  13. $\{ (x_1, x_2, x_3) \mid x_3 < x_2 < x_1 \}$ <!-- (2, 1, 0) -->
+   1. $\\{ (x_1, x_2, x_3) \mid x_1 = x_2 = x_3 \\}$ <!-- (0, 0, 0)-->
+   2. $\\{ (x_1, x_2, x_3) \mid x_1 = x_2 < x_3 \\}$ <!-- (0, 0, 1) -->
+   3. $\\{ (x_1, x_2, x_3) \mid x_1 = x_3 < x_2 \\}$ <!-- (0, 1, 0) -->
+   4. $\\{ (x_1, x_2, x_3) \mid x_1 < x_2 = x_3 \\}$ <!-- (0, 1, 1) -->
+   5. $\\{ (x_1, x_2, x_3) \mid x_2 = x_3 < x_1 \\}$ <!-- (1, 0, 0) -->
+   6. $\\{ (x_1, x_2, x_3) \mid x_2 < x_1 = x_3 \\}$ <!-- (1, 0, 1) -->
+   7. $\\{ (x_1, x_2, x_3) \mid x_3 < x_1 = x_2 \\}$ <!-- (1, 1, 0) -->
+   8. $\\{ (x_1, x_2, x_3) \mid x_1 < x_2 < x_3 \\}$ <!-- (0, 1, 2) -->
+   9. $\\{ (x_1, x_2, x_3) \mid x_1 < x_3 < x_2 \\}$ <!-- (0, 2, 1) -->
+  10. $\\{ (x_1, x_2, x_3) \mid x_2 < x_1 < x_3 \\}$ <!-- (1, 0, 2) -->
+  11. $\\{ (x_1, x_2, x_3) \mid x_3 < x_1 < x_2 \\}$ <!-- (1, 2, 0) -->
+  12. $\\{ (x_1, x_2, x_3) \mid x_2 < x_3 < x_1 \\}$ <!-- (2, 0, 1) -->
+  13. $\\{ (x_1, x_2, x_3) \mid x_3 < x_2 < x_1 \\}$ <!-- (2, 1, 0) -->
 </details>
 
 These categories are called **orbits** in nominal sets.
@@ -85,23 +85,23 @@ Automata learning is one of the important applications of nominal sets.
 We can consider **nominal automata** and extend automata theory to nominal sets.
 Nominal automata can have an infinite alphabet and infinite number of states, making them more powerful than finite-state automata.
 
-For example, a language $L_{aa} = \{ a a \mid a \in \mathbb{A} \}$, in which the same letter is repeated twice, cannot be accepted by finite-state automata because it requires an infinite number of states when the alphabet is infinite.
+For example, a language $L_{aa} = \\{ a a \mid a \in \mathbb{A} \\}$, in which the same letter is repeated twice, cannot be accepted by finite-state automata because it requires an infinite number of states when the alphabet is infinite.
 The following transition diagram shows a nominal DFA accepting $L_{aa}$.
 The middle state $q_x$ is subscripted with a variable $x$ and is considered to be infinite.
-That is, the set of state of this DFA is $\{ q_0, q_1, q_2 \} \cup \{ q_x \mid x \in \mathbb{A} \}$.
+That is, the set of state of this DFA is $\\{ q_0, q_1, q_2 \\} \cup \\{ q_x \mid x \in \mathbb{A} \\}$.
 
 ```mermaid
 flowchart LR
-  q0(("$$q_0$$"))
-  qx(("$$q_x$$"))
-  q1((("$$q_1$$")))
-  q2(("$$q_2$$"))
+  q0(("q0"))
+  qx(("qx"))
+  q1((("q1")))
+  q2(("q2"))
 
-  q1 -- "$$a$$" --> q2
+  q1 -- "a" --> q2
 
-  q0 -- "$$x = a$$" --> qx
-  qx -- "$$x = a$$" --> q1
-  qx -- "$$x \ne a$$" --> q2
+  q0 -- "x = a" --> qx
+  qx -- "x = a" --> q1
+  qx -- "x ≠ a" --> q2
 ```
 
 Automata learning is an algorithm for inferring DFA from a black-box **teacher** system.
