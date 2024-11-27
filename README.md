@@ -51,7 +51,7 @@ In addition, when we consider triplet $\mathbb{A} \times \mathbb{A} \times \math
 These categories are called **orbits** in nominal sets.
 In nominal sets, by managing orbits internally rather than infinite values, it allows infinite sets to be treated as if they were finite sets.
 
-Now let's try to see how the program can actually handle an infinite set.
+Now, let's try to see how the program can actually handle an infinite set.
 
 ```scala
 import onamae.*
@@ -68,7 +68,7 @@ allAtoms.contains(Atom(100)) // => true
 // `distinctPairs` are a set of pairs of distinct atoms, i.e., { (x, y) | x != y }.
 // We can use `filter` for `NSet`s.
 val distinctPairs: NSet[(Atom, Atom)] =
-  NSet.product(NSet.atoms, NSet.atoms).filter((a, b) => a != b)
+  NSet.product(NSet.atoms, NSet.atoms).filter(_ != _)
 
 distinctPairs.contains((Atom(0), Atom(1))) // => true
 distinctPairs.contains((Atom(1), Atom(0))) // => true
@@ -78,6 +78,58 @@ distinctPairs.contains((Atom(0), Atom(0))) // => false
 distinctPairs.contains((Atom(100), Atom(200))) // => true
 distinctPairs.contains((Atom(100), Atom(100))) // => false
 ```
+
+### $\nu L^\ast$ (automata learning)
+
+Automata learning is one of the important applications of nominal sets.
+We can consider **nominal automata** and extend automata theory to nominal sets.
+Nominal automata can have an infinite alphabet and infinite number of states, making them more powerful than finite-state automata.
+
+For example, a language $L_{aa} = \{ a a \mid a \in \mathbb{A} \}$, in which the same letter is repeated twice, cannot be accepted by finite-state automata because it requires an infinite number of states when the alphabet is infinite.
+The following transition diagram shows a nominal DFA accepting $L_{aa}$.
+The middle state $q_x$ is subscripted with a variable $x$ and is considered to be infinite.
+That is, the set of state of this DFA is $\{ q_0, q_1, q_2 \} \cup \{ q_x \mid x \in \mathbb{A} \}$.
+
+```mermaid
+flowchart LR
+  q0(("$$q_0$$"))
+  qx(("$$q_x$$"))
+  q1((("$$q_1$$")))
+  q2(("$$q_2$$"))
+
+  q1 -- "$$a$$" --> q2
+
+  q0 -- "$$x = a$$" --> qx
+  qx -- "$$x = a$$" --> q1
+  qx -- "$$x \ne a$$" --> q2
+```
+
+Automata learning is an algorithm for inferring DFA from a black-box **teacher** system.
+The algorithm extended to nominal DFA is known as $\nu L^\ast$.
+
+Onamae implements nominal automata and $\nu L^\ast$ in the `onamae.automaton` namespace and is easy to use.
+
+```scala
+import onamae.*
+import onamae.automaton.*
+
+// `NDFA` is a type of nominal DFAs.
+// `NDFA.ww(1)` returns a DFA accepts $L_{aa}$.
+val Laa = NDFA.ww(1)
+
+// Once the teacher is created from a DFA and passed to `LStar.learn`,
+// the learning is executed.
+val teacher = Teacher.fromDFA(Laa)
+val inferred = LStar.learn(teacher)
+
+// `inferred` is a DFA accepts $L_{aa}$, so the separating word between them
+// are not found, i.e., they are equivalent.
+NDFA.findSepWord(Laa, inferred) // => None
+```
+
+For more details on the $\nu L^\ast$ algorithm, please refer to [Moerman, et al. (2017)].
+
+[Moerman, et al. (2017)]: https://dl.acm.org/doi/10.1145/3093333.3009879
 
 ## License
 
