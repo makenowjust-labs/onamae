@@ -1,5 +1,6 @@
 .bloop/
 .bsp/
+.crossnote/
 .metals/
 .vscode/
 project/
