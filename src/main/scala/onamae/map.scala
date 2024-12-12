@@ -160,10 +160,10 @@ object NMap:
       val vs = supportV.toSeq
       var i = 0
       for v <- vs do
-        val j = ks.indexOf(v)
+        val j = ks.indexOf(v, i)
         if j == -1 then throw new IllegalArgumentException("Not an equivariant map")
         supportFilter.addOne(j)
-        i = j
+        i = j + 1
       supportFilter.result()
 
     /** Encodes a pair of `key` and `value` into an entry of equivariant maps. */

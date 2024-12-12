@@ -11,7 +11,7 @@ import scala.deriving.Mirror
   * This value is represented by 32-bit signed integer value, and we assume that the value should be positive.
   * Thus, the maximal number of atoms is limited to `2 ** 31`, but it is not problematic in usually cases.
   */
-final class Atom(private val id: Int) extends Ordered[Atom]:
+final class Atom private (private val id: Int) extends Ordered[Atom]:
   override def compare(that: Atom): Int = id.compare(that.id)
 
   override def equals(that: Any): Boolean = that match
@@ -21,6 +21,15 @@ final class Atom(private val id: Int) extends Ordered[Atom]:
   override def hashCode(): Int = id.hashCode()
 
   override def toString(): String = s"Atom($id)"
+
+object Atom:
+  private val cache: Array[Atom | Null] = Array.tabulate(100)(new Atom(_))
+
+  /** Returns an atom with the given value.
+    *
+    * Note that we assume `n >= 0`.
+    */
+  def apply(n: Int): Atom = if n < cache.size then cache(n) else new Atom(n)
 
 /** Support is a support of nominal elements. */
 final case class Support(toSortedSet: SortedSet[Atom]) extends Ordered[Support]:
